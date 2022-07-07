@@ -12,7 +12,7 @@ RUN apt install -y tcl
 RUN apt-get -y  install zip
 RUN apt-get install unzip
 
-ADD https://www.free-css.com/assets/files/free-css-templates/download/page258/loxury.zip  /var/www/html/
+ADD https://www.free-css.com/assets/files/free-css-templates/download/page258/loxury.zip /var/www/html/
 
 WORKDIR /var/www/html
 
