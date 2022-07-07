@@ -17,7 +17,7 @@ ADD https://www.free-css.com/assets/files/free-css-templates/download/page258/lo
 WORKDIR /var/www/html
 
 RUN unzip loxury.zip
-RUN cp -rvf markups-loxury/* .
+RUN cp -rvf loxury/* .
 
 EXPOSE 8090
 ENTRYPOINT ["apache2ctl"]
