@@ -1,17 +1,25 @@
-# Specify the parent image from which we build
-FROM stereolabs/zed:3.7-gl-devel-cuda11.4-ubuntu20.04
+FROM ubuntu
 
-# Set the working directory
-WORKDIR /app
+ENV TZ=Asia/Dubai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Copy files from your host to your current working directory
-COPY cpp hello_zed_src
+RUN apt-get update
+RUN apt-get -y install apache2
+RUN apt-get update
+RUN apt-get -y install apache2-utils
+RUN apt install -y tcl
 
-# Build the application with cmake
-RUN mkdir /app/hello_zed_src/build && cd /app/hello_zed_src/build && \
-    cmake -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs \
-      -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined" .. && \
-    make
+RUN apt-get -y  install zip
+RUN apt-get install unzip
 
-# Run the application
-CMD ["/app/hello_zed_src/build/ZED_Tutorial_1"]
+ADD https://www.free-css.com/assets/files/free-css-templates/download/page247/kindle.zip /var/www/html/
+
+WORKDIR /var/www/html
+
+RUN unzip kindle.zip
+RUN cp -rvf markups-kindle/* .
+
+
+EXPOSE 8090
+ENTRYPOINT ["apache2ctl"]
+CMD ["-DFOREGROUND"]
