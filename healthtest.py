@@ -1,48 +1,53 @@
 import streamlit as st
 import requests
+import certifi
 
-# API Configuration
+# Configuration
 BASE_URL = "https://api.endlessmedical.com/v1/dx"
 
-st.set_page_config(page_title="SafeDiag Medical Bot", page_icon="⚕️")
-st.title("⚕️ SafeDiag Clinical Assistant")
-st.caption("Powered by EndlessMedical Clinical Logic")
+# Simple mapping dictionary to bridge user language to API features
+SYMPTOM_MAP = {
+    "stomach ache": "AbdominalPain",
+    "fever": "Temp",
+    "cough": "Cough",
+    "headache": "Headache",
+    "sore throat": "SoreThroat"
+}
 
-# 1. Initialize Session (Required by EndlessMedical)
+st.set_page_config(page_title="SafeDiag AI", page_icon="⚕️")
+st.title("⚕️ Physician Consultation Assistant")
+
+# Initialize Session
 if 'session_id' not in st.session_state:
-    response = requests.get(f"{BASE_URL}/InitSession")
-    if response.status_code == 200:
-        st.session_state.session_id = response.json().get("SessionID")
+    # Use certifi.where() to fix the SSLError
+    res = requests.get(f"{BASE_URL}/InitSession", verify=certifi.where())
+    st.session_state.session_id = res.json().get("SessionID")
 
-# 2. User Input
-st.info("Note: This bot uses structured clinical data. Use terms like 'Cough', 'Fever', or 'Headache'.")
-user_symptom = st.text_input("Enter a primary symptom:")
+user_input = st.text_input("Describe your symptom (e.g., fever, stomach ache):").lower()
 
-if st.button("Analyze Symptoms"):
-    if user_symptom:
+if st.button("Consult"):
+    if user_input in SYMPTOM_MAP:
         sid = st.session_state.session_id
+        feature = SYMPTOM_MAP[user_input]
         
-        # Step A: Accept Terms (Required for analysis)
-        requests.post(f"{BASE_URL}/AcceptTermsOfUse?SessionID={sid}&passphrase=I have read, understood and I accept and agree to comply with the Terms of Use of EndlessMedicalAPI and EndlessMedical services.")
+        # 1. Accept Terms
+        terms_url = f"{BASE_URL}/AcceptTermsOfUse?SessionID={sid}&passphrase=I have read, understood and I accept and agree to comply with the Terms of Use of EndlessMedicalAPI and EndlessMedical services."
+        requests.post(terms_url, verify=certifi.where())
         
-        # Step B: Update Feature (Adding the symptom to your session)
-        # Note: In a full app, you'd map "Fever" to the API's internal feature names
-        requests.post(f"{BASE_URL}/UpdateFeature?SessionID={sid}&name={user_symptom}&value=5") # Value 5 = Moderate/Present
+        # 2. Add Symptom (Value 5 = Present/Moderate)
+        requests.post(f"{BASE_URL}/UpdateFeature?SessionID={sid}&name={feature}&value=5", verify=certifi.where())
         
-        # Step C: Get Analysis
-        analysis_res = requests.get(f"{BASE_URL}/Analyze?SessionID={sid}")
+        # 3. Analyze
+        analysis = requests.get(f"{BASE_URL}/Analyze?SessionID={sid}", verify=certifi.where()).json()
         
-        if analysis_res.status_code == 200:
-            data = analysis_res.json()
-            st.subheader("Clinical Analysis")
-            if data.get("status") == "ok":
-                # Display results (The API returns diseases and their probabilities)
-                st.write("Potential conditions based on clinical data:")
-                st.json(data.get("Diseases", {})) 
-            else:
-                st.error("The API could not find a match for that specific term.")
+        if analysis.get("status") == "ok":
+            st.subheader("Potential Assessments")
+            # The API returns a dictionary of conditions and probabilities
+            for disease, probability in analysis.get("Diseases", {}).items():
+                st.write(f"**{disease}**: {probability}")
+        else:
+            st.error("Diagnostic engine error. Please try a different symptom.")
     else:
-        st.warning("Please enter a symptom.")
+        st.warning("Please try: fever, cough, or stomach ache (Mapping dictionary is limited).")
 
-st.divider()
-st.warning("**Disclaimer:** This is a demonstration. Always consult a human doctor before taking any medication.")
+st.info("💡 Tip: In a real app, you would use a 'GetFeatures' loop to map all 800+ symptoms.")
