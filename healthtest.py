@@ -3,7 +3,7 @@ import openai
 
 # Configuration
 st.set_page_config(page_title="Med-Assist AI", page_icon="⚕️")
-st.title("⚕️ Physician Assistant Bot")
+st.title("⚕️ Physician Assistant -Created By Pankaj")
 
 # Legal Disclaimer
 st.warning("DISCLAIMER: This tool is for informational purposes only. It is NOT a substitute for professional medical advice.")
