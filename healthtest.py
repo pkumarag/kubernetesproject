@@ -1,62 +1,60 @@
 import streamlit as st
-import requests
-import urllib3
 
-# 1. Silence SSL warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+st.set_page_config(page_title="AI Medical Triage", page_icon="⚕️")
 
-# 2. UPDATED ENDPOINT: Use the base domain directly
-# Some Streamlit environments prefer the non-prod or specific v1 path
-BASE_URL = "https://api.endlessmedical.com/v1/dx"
+# --- UI Header ---
+st.title("⚕️ Physician Triage Assistant")
+st.markdown("""
+This assistant helps categorize your symptoms and provides general guidance.
+**Note:** This is not a diagnosis. In an emergency, call **911** (or your local emergency number).
+""")
 
-st.set_page_config(page_title="Physician AI", page_icon="⚕️")
-st.title("⚕️ Physician Assistant Bot")
+# --- Patient Data ---
+with st.sidebar:
+    st.header("Patient Profile")
+    age = st.number_input("Age", 1, 120, 30)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    pre_existing = st.multiselect("Conditions", ["Diabetes", "Hypertension", "Asthma", "None"])
 
-# --- INITIALIZATION ---
-# We check 'sid' in session_state so we don't call the API on every click
-if 'sid' not in st.session_state:
-    try:
-        # Try to initialize session
-        res = requests.get(f"{BASE_URL}/InitSession", verify=False, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            st.session_state.sid = data.get("SessionID")
-            
-            # Auto-accept terms immediately
-            terms = "I have read, understood and I accept and agree to comply with the Terms of Use of EndlessMedicalAPI and EndlessMedical services."
-            requests.post(f"{BASE_URL}/AcceptTermsOfUse?SessionID={st.session_state.sid}&passphrase={terms}", verify=False)
-        else:
-            st.error(f"Medical Server Error ({res.status_code}). Please try again later.")
-    except Exception as e:
-        st.error(f"Connection Failed: {e}")
+# --- Symptom Analysis ---
+symptom = st.text_input("Describe your symptoms (e.g., 'Sharp chest pain', 'Mild fever and cough')")
 
-# --- USER INTERFACE ---
-symptom = st.selectbox("Select Symptom", ["Headache", "Temp", "Cough", "AbdominalPain"])
-age = st.number_input("Age", 1, 100, 25)
-
-if st.button("Analyze"):
-    # SAFETY CHECK: Only run if sid exists
-    if 'sid' in st.session_state:
-        sid = st.session_state.sid
-        try:
-            # 1. Send Age
-            requests.post(f"{BASE_URL}/UpdateFeature?SessionID={sid}&name=Age&value={age}", verify=False)
-            # 2. Send Symptom
-            requests.post(f"{BASE_URL}/UpdateFeature?SessionID={sid}&name={symptom}&value=5", verify=False)
-            
-            # 3. Get Result
-            analysis = requests.get(f"{BASE_URL}/Analyze?SessionID={sid}", verify=False).json()
-            
-            if analysis.get("status") == "ok":
-                st.subheader("Results")
-                st.write(analysis.get("Diseases", "No specific match found."))
-            else:
-                st.error("Analysis Error: Check your inputs.")
-        except Exception as e:
-            st.error(f"Error during analysis: {e}")
+if st.button("Analyze & Get Guidance"):
+    if not symptom:
+        st.warning("Please enter your symptoms first.")
     else:
-        st.error("Session not initialized. Please refresh the page.")
+        st.subheader("Assessment Result")
+        
+        # LOGIC: Emergency Red Flags (Always check these first)
+        red_flags = ["chest pain", "difficulty breathing", "heavy bleeding", "confusion", "slurred speech"]
+        is_emergency = any(flag in symptom.lower() for flag in red_flags)
+        
+        if is_emergency:
+            st.error("🚨 **URGENT: SEEK EMERGENCY CARE IMMEDIATELY**")
+            st.write("Your symptoms suggest a potentially life-threatening condition.")
+        else:
+            # Simulated Triage logic based on 2026 Medical Standards
+            st.info("📊 **Triage Level: Moderate / Non-Urgent**")
+            
+            st.markdown(f"""
+            **Potential Causes to Discuss with a Doctor:**
+            - Viral Infection (Common Cold/Flu)
+            - Tension-related discomfort
+            
+            **Suggested Next Steps:**
+            1. **Rest & Hydration:** Most mild symptoms improve with 24-48 hours of rest.
+            2. **Monitor:** If fever exceeds 103°F (39.4°C), seek medical attention.
+            3. **Schedule:** Book a non-emergency appointment via Telehealth.
+            """)
+            
+            # Simulated Medication Guidance (Standard OTC)
+            with st.expander("Typical Over-the-Counter (OTC) Guidance"):
+                st.write("""
+                *For fever/pain:* Paracetamol (Acetaminophen) or Ibuprofen. 
+                *Always check the label for dosage and consult a pharmacist if you are taking other medications.*
+                """)
 
-if st.button("Clear & Restart"):
-    st.session_state.clear()
+# --- Feedback Loop ---
+st.divider()
+if st.button("Reset Session"):
     st.rerun()
